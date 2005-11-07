@@ -9,33 +9,49 @@ use warnings;
 use Scalar::Util ();
 use Catalyst::Plugin::Authorization::ACL::Engine;
 
-BEGIN { __PACKAGE__->add_classdata("_acl_engine") }
-
-sub setup {
-	my $class = shift;
-
-	$class->_acl_engine(
-		Catalyst::Plugin::Authorization::ACL::Engine->new( $c );
-}
+BEGIN { __PACKAGE__->mk_classdata("_acl_engine") }
 
 sub execute {
-	my ( $c, $class, $action ) = @_;
+    my ( $c, $class, $action ) = @_;
 
-	if ( Scalar::Util::blessed( $action ) ) {
-		$c->_acl_engine->check_action_rules( $action );
-	}
+    if ( Scalar::Util::blessed($action) ) {
+		eval { $c->_acl_engine->check_action_rules( $c, $action ) };
 
-	$c->NEXT::execute( $class, $action );
+		if ($@) {
+			warn "error: $@";
+			$c->log->error($@);
+			$c->error($@);
+			$c->state(0);
+			return $c->state;
+		}
+    }
+
+	local $NEXT::NEXT{$c, "execute"};
+    $c->NEXT::execute( $class, $action );
 }
 
-sub restrict_access {
-	my $c = shift;
-	$c->_acl_engine->restrict_access( @_ );
+sub setup {
+    my $app = shift;
+    my $ret = $app->NEXT::setup( @_ );
+
+    $app->_acl_engine( Catalyst::Plugin::Authorization::ACL::Engine->new($app) );
+    
+    $ret;
 }
 
-sub permit_access {
-	my $c = shift;
-	$c->_acl_engine->permit_access( @_ );
+sub deny_access_unless {
+    my $c = shift;
+    $c->_acl_engine->add_deny( @_ );
+}
+
+sub allow_access_if {
+    my $c = shift;
+    $c->_acl_engine->add_allow( @_ );
+}
+
+sub acl_add_rule {
+    my $c = shift;
+    $c->_acl_engine->add_rule( @_ );
 }
 
 __PACKAGE__;
@@ -57,17 +73,19 @@ URIs.
 		Authorization::ACL
 	/;
 
-	__PACKAGE__->restrict_access(
+	__PACKAGE__->setup;
+
+	# deny if the check is false
+	__PACKAGE__->deny_access_unless(
 		"/foo/bar",
-		..., # see below on how to specify a permission
+		..., # see below on how to specify a rule predicate
 	);
 
-	__PACKAGE__>permit_access(
-		"My::Controller",
+	# allow if the check is true
+	__PACKAGE__>allow_access_if(
+		"/foo/bar/gorch",
 		...,
 	);
-
-	__PACKAGE__->setup;
 
 =head1 DESCRIPTION
 
@@ -78,21 +96,72 @@ applications have:
 
 =item Private Namepsace
 
-Every action is placed somewhere in the private L<Catalyst> namespace under
-some controller.  This is the perl package of the code reference the action is
-defined as, or the path you C<forward> to.
+Every action has it's own private path. This path reflects the Perl namespaces
+the actions were born in, and the namespaces of their controllers.
 
 =item External namespace
 
-Every action also has some sort of path within the application that it can be
-referred by. This is probably almost equivalent to the private namespace, but
-is technically orthogonal.
+Some actions are also accessible from the outside, via another path.
+
+This path is usually the same, if you used C<Local>. Alternatively you can use
+C<Path>, C<Regex>, or C<Global> to specify a different external path for your
+action.
 
 =back
 
-This module performs authorization checks automatically for you, based on the
-request URI, and all the dispatches.
+The ACL module currently only knows to exploit the private namespace. In the
+future extensions may be made to support external namespaces as well.
 
+=head1 METHODS
+
+=item allow_access_if $path, $predicate
+
+=item deny_access_unless $path, $predicate
+
+Adds a rule to all the actions under C<$path>. C<$predicate> can take the
+following forms:
+
+	__PACAKGE__->deny_access_unless(
+		"/foo",
+		"foo", # calls $c->foo( $action ), expects boolean return
+	);
+
+	__PACAKGE__->deny_access_unless(
+		"/foo",
+		sub { }, # calls $subref->( $c, $action ), expects boolean return
+	);
+
+	__PACAKGE__->deny_access_unless(
+		"/foo",
+		[qw/list of roles/], # delegates to Authorization::Roles
+	);
+
+Note - C<allow_access_if> will have no effect unless a more general
+C<deny_access_unless> rule also applies to the action.
+
+=item acl_add_rule $path, $rule, [ $filter ]
+
+Manually add a rule to all the actions under C<$path> using the more flexible (but
+more verbose) method:
+
+	__PACKAGE__->acl_add_rule(
+		"/foo",
+		sub {
+			my ( $c, $action ) = @_;
+			# die with $Catalyst::Plugin::Authorization::ACL::Engine::DENIED to deny access
+			# die with $Catalyst::Plugin::Authorization::ACL::Engine::ALLOWED to allow access
+			# otherwise the next rule for this action is tried
+		},
+		sub {
+			my $action = shift;
+			# return a true value if you want to apply the rule to this action
+			# called for all the actions under "/foo"
+		}
+	};
+
+In this case the rule must be a sub reference (or method name) to be invoked on
+$c.
+	
 =cut
 
 

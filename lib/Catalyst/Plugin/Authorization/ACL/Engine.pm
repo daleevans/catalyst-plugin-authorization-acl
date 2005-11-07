@@ -6,131 +6,164 @@ use base qw/Class::Accessor::Fast/;
 use strict;
 use warnings;
 
-use Tree::Simple::Visitor::GetAllDescendents;
-use Tree::Simple::Visitor::FindByPath;
+use Class::Throwable;
 
-BEGIN { __PACKAGE__->mk_accessors(qw/c actions/) }
+BEGIN { __PACKAGE__->mk_accessors(qw/app actions/) }
 
 =todo
 
 	* external uris -> private paths
 
-	* create_*_rule
-
-	* make restrict_access and permit_access just queue things, linearize rules
-	  on setup (don't forget to make errors go back to the line that declared,
-	  not to setup)
-
 =cut
 
+our $DENIED  = bless {}, __PACKAGE__ . "::Denied";
+our $ALLOWED = bless {}, __PACKAGE__ . "::Allowed";
+
 sub new {
-	my ( $class, $c )  = @_;
-	
-	my $self = bless {
-		actions => { },
-		c => $c,
-	}, $class;
+    my ( $class, $c ) = @_;
 
-	$self;	
+    my $self = bless {
+        actions => {},
+        app     => $c,
+    }, $class;
+
+    $self;
 }
 
-sub linearize_rules {
-	my $self = shift;
+sub add_deny {
+    my ( $self, $spec, $condition ) = @_;
 
-	foreach my $action_data (values %{ $c->actions }) {
-		# flatten the array-of-array of rules into a single array of rules
-		$action_data->{rules} = map { @$_ } @{ delete $action_data->{rules_radix} };
-	}
+    my $test = $self->fudge_condition($condition);
+
+    $self->add_rule(
+        $spec,
+        sub {
+            my $c = shift;
+            die $DENIED unless $c->$test(@_);
+        },
+    );
 }
 
-sub restrict_access {
-	my ( $self, $spec, $condition ) = @_;
-	my $rule = $self->create_deny_rule( $cond );
-	$self->compile_rule( $spec, sub { }, $rule );
+sub add_allow {
+    my ( $self, $spec, $condition ) = @_;
+
+    my $test = $self->fudge_condition($condition);
+
+    $self->add_rule(
+        $spec,
+        sub {
+            my $c = shift;
+            die $ALLOWED if $c->$test(@_);
+        },
+    );
 }
 
-sub permit_access {
-	my ( $self, $spec, $condition ) = @_;
-	my $rule = $self->create_allow_rule( $cond );
-	$self->compile_rule( $spec, sub { }, $rule );
-}
+sub fudge_condition {
+    my ( $self, $condition ) = @_;
 
-sub compile_rule {
-    my ( $self, $path, $filter, $rule ) = @_;
+    # make almost anything into a code ref/method name
+    if ( my $reftype = ref $condition ) {
+        $reftype eq "CODE" and return $condition;
 
-	my $path = Catalyst::Utils::class2prefix( $spec ) || $spec;
-	my $d = $self->c->dispatcher;
+        # if it's not a code ref and it's a ref, we only know
+        # how to deal with it if it's an array of roles
+        $reftype ne "ARRAY"
+          and die "Can't interpret '$condition' as an ACL condition";
 
-    if ( my $action = $d->get_action($path) ) {
-        $self->append_rule_to_action( $loc, 0, $rule );
+        # but to check roles we need the appropriate plugin
+        $self->app->isa("Catalyst::Plugin::Authorization::Roles")
+          or die "Can't use role list as an ACL condition unless "
+          . "the Authorization::Roles plugin is also loaded.";
+
+        # return a test that will check for the roles
+        return sub {
+            my $c = shift;
+            $c->check_user_roles(@$condition);
+        };
     }
     else {
-		my $slash_count = ($path =~ tr#/##);
-        foreach my $action ( grep &$filter(), $map { @{ $_->actions } } $d->get_containers($path) ) {
-			$self->append_rule_to_action(
-				$action,
-				( $action->reverse =~ tr#/## ) - $slash_count, # how far an action is from the origin of the ACL
-				$rule,
-			);
-		}
+        $self->app->can($condition)
+          or die "Can't use string '$condition' as an ACL "
+          . "condition unless \$c->can('$condition').";
+
+        return $condition;    # just a method name
+    }
+}
+
+sub add_rule {
+    my ( $self, $path, $rule, $filter ) = @_;
+    $filter ||= sub { 1 };
+
+    my $d = $self->app->dispatcher;
+
+    if ( my $action = $d->get_action( $path =~ m#^(.*?)([^/]+)$# ) ) {
+        $self->append_rule_to_action( $action, 0, $rule );
+    }
+    else {
+        my $slash_count = ( $path =~ tr#/## );
+        foreach my $action (
+            grep { $filter->($_) }
+              map  { values %{ $_->actions } }
+                $d->get_containers($path)
+          )
+        {
+            $self->append_rule_to_action(
+                $action,
+                ( $action->reverse =~ tr#/## ) - $slash_count
+                ,    # how far an action is from the origin of the ACL
+                $rule,
+            );
+        }
     }
 }
 
 sub append_rule_to_action {
-	my ( $self, $action, $sort_index, $rule ) = @_;
-	push @{ $self->get_action_data( $action )->{rules_radix}[$sort_index] }, $rule;
-
-}
-
-sub find_path_in_tree {
-	my ( $self, $path ) = @_;
-	my @path = split("/", );
-
-	my $tree = $self->c->dispatcher->tree;
-
-	my $visitor = Tree::Simple::Visitor::FindByPath->new;
-	$visitor->setSearchPath( @path );
-
-	$tree->accept($visitor);
-	
-	my $node == $visitor->getResult || Catalyst::Exception->throw("Can't apply rules to non-existent path");
+    my ( $self, $action, $sort_index, $rule ) = @_;
+    push @{ $self->get_action_data($action)->{rules_radix}[$sort_index] }, $rule;
 
 }
 
 sub get_action_data {
-	my ( $self, $action ) = @_;
-	$self->actions->{ $action->reverse };
+    my ( $self, $action ) = @_;
+    $self->actions->{ $action->reverse } ||= {};
 }
 
 sub get_rules {
-	my ( $self, $action ) = @_;
+    my ( $self, $action ) = @_;
 
-	@{ ( $self->get_action_data($action) || return () )->{rules} }
+    map { @$_ } @{ ( $self->get_action_data($action) || return () )->{rules_radix} };
 }
 
 sub check_action_rules {
-	my ( $self, $action ) = @_;
+    my ( $self, $c, $action ) = @_;
 
-	eval {
-		foreach my $rule ( $self->get_rules( $action ) ) {
-			$rule->($c, $action);
-		}
-	}
+    my $last_rule;
+    eval {
+        foreach my $rule ( $self->get_rules($action) ) {
+            $last_rule = $rule;
+            $c->$rule($action);
+        }
+    };
 
-	if ($@) {
-		if ($@ == $DENIED) {
-			# deny
-		} elsif ( $@ == $ALLOWED ) {
-			# allow, explicit
-		} else {
-			 # unknown exception
-		}
-	} else {
-		# allow, fall through
-	}
+    if ($@) {
+        if ( ref $@ and $@ == $DENIED ) {
+            die "Access to $action denied by rule $last_rule.";
+        }
+        elsif ( ref $@ and $@ == $ALLOWED ) {
+            return;
+        }
+        else {
+
+            # unknown exception
+            # FIXME - add context (the user should know what rule
+            # generated the exception, and where it was added)
+            Class::Throwable->throw(
+                "An error occurred while evaluating ACL rules.", $@ );
+        }
+    }
+
+    # no rules means allow by default
 }
-
-
 
 __PACKAGE__;
 
