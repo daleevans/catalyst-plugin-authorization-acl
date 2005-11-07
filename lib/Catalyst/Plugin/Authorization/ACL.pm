@@ -14,19 +14,17 @@ BEGIN { __PACKAGE__->mk_classdata("_acl_engine") }
 sub execute {
     my ( $c, $class, $action ) = @_;
 
+	local $NEXT::NEXT{$c, "execute"};
+
     if ( Scalar::Util::blessed($action) ) {
 		eval { $c->_acl_engine->check_action_rules( $c, $action ) };
 
-		if ($@) {
-			warn "error: $@";
-			$c->log->error($@);
-			$c->error($@);
-			$c->state(0);
-			return $c->state;
+		if ( my $err = $@ ) {
+			return $c->NEXT::execute( $class, sub { die $err });
 		}
+		
     }
 
-	local $NEXT::NEXT{$c, "execute"};
     $c->NEXT::execute( $class, $action );
 }
 

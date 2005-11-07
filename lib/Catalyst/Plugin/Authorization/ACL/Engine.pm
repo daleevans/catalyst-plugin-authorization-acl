@@ -147,7 +147,7 @@ sub check_action_rules {
 
     if ($@) {
         if ( ref $@ and $@ == $DENIED ) {
-            die "Access to $action denied by rule $last_rule.";
+            die "Access to $action denied by rule $last_rule.\n";
         }
         elsif ( ref $@ and $@ == $ALLOWED ) {
             return;
