@@ -6,7 +6,10 @@ use base qw/Class::Accessor::Fast/;
 use strict;
 use warnings;
 
+# I heart stevan
 use Class::Throwable;
+use Tree::Simple::Visitor::FindByPath;
+use Tree::Simple::Visitor::GetAllDescendents;
 
 BEGIN { __PACKAGE__->mk_accessors(qw/app actions/) }
 
@@ -92,46 +95,70 @@ sub fudge_condition {
 
 sub add_rule {
     my ( $self, $path, $rule, $filter ) = @_;
-    $filter ||= sub { 1 };
+    $filter ||= sub { $_[0]->name !~ /^_/ }; # internal actions are not ACL'd
 
     my $d = $self->app->dispatcher;
 
     if ( my $action = $d->get_action( $path =~ m#^(.*?)([^/]+)$# ) ) {
+        $self->app->log->debug("$path is an action") if $self->app->debug;
         $self->append_rule_to_action( $action, 0, $rule );
     }
     else {
-        my $slash_count = ( $path =~ tr#/## );
-        foreach my $action (
-            grep { $filter->($_) }
-              map  { values %{ $_->actions } }
-                $d->get_containers($path)
-          )
-        {
-            $self->append_rule_to_action(
-                $action,
-                ( $action->reverse =~ tr#/## ) - $slash_count
-                ,    # how far an action is from the origin of the ACL
-                $rule,
-            );
+        my $tree = $d->tree;
+
+        my $by_path = Tree::Simple::Visitor::FindByPath->new;
+        $by_path->setSearchPath( grep { $_ ne "" } split( "/", $path ) );
+        $tree->accept($by_path);
+
+        my $subtree = $by_path->getResult
+          || Catalyst::Exception->throw("The path '$path' does not exist (traversal path: @{[ $by_path->getResults ]})");
+        my $root_depth = $subtree->getDepth;
+
+        my $descendents = Tree::Simple::Visitor::GetAllDescendents->new;
+        $tree->accept($descendents);
+
+        foreach my $node ( $subtree, $descendents->getAllDescendents ) {
+            my ( $container, $depth ) = ( $node->getNodeValue, $node->getDepth );
+
+            foreach my $action ( grep { $filter->($_) }
+                values %{ $container->actions } )
+            {
+                $self->app->log->debug(
+                        "$path contains the action $action (from "
+                      . $action->namespace
+                      . ")" )
+                  if $self->app->debug;
+                $self->append_rule_to_action(
+                    $action,
+                    1 + ( $depth - $root_depth ), # how far an action is from the origin of the ACL
+                    $rule,
+                );
+            }
         }
     }
 }
 
 sub append_rule_to_action {
     my ( $self, $action, $sort_index, $rule ) = @_;
-    push @{ $self->get_action_data($action)->{rules_radix}[$sort_index] }, $rule;
+    $self->app->log->debug(
+        "appending $rule to $action with sort index $sort_index")
+      if $self->app->debug;
+    $sort_index = 0 if $sort_index < 0;
+    push @{ $self->get_action_data($action)->{rules_radix}[$sort_index] ||=
+          [] }, $rule;
 
 }
 
 sub get_action_data {
     my ( $self, $action ) = @_;
-    $self->actions->{ $action->reverse } ||= {};
+    $self->actions->{ $action->reverse } ||= { action => $action };
 }
 
 sub get_rules {
     my ( $self, $action ) = @_;
 
-    map { @$_ } @{ ( $self->get_action_data($action) || return () )->{rules_radix} };
+    map { $_ ? @$_ : () }
+      @{ ( $self->get_action_data($action) || return () )->{rules_radix} };
 }
 
 sub check_action_rules {
@@ -139,7 +166,9 @@ sub check_action_rules {
 
     my $last_rule;
     eval {
-        foreach my $rule ( $self->get_rules($action) ) {
+        foreach my $rule ( $self->get_rules($action) )
+        {
+            $c->log->debug("running ACL rule $rule on $action") if $c->debug;
             $last_rule = $rule;
             $c->$rule($action);
         }
