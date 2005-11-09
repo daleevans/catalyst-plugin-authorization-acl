@@ -99,8 +99,10 @@ sub add_rule {
 
     my $d = $self->app->dispatcher;
 
-    if ( my $action = $d->get_action( $path =~ m#^(.*?)([^/]+)$# ) ) {
-        $self->app->log->debug("$path is an action") if $self->app->debug;
+    my ($ns, $name) = $path =~ m#^/?(.*?)/?([^/]+)$#;
+
+    if ( my $action = $d->get_action( $name, $ns ) ) {
+        $self->app->log->debug("Adding ACL rule to the action $path") if $self->app->debug;
         $self->append_rule_to_action( $action, 0, $rule );
     }
     else {
@@ -111,11 +113,13 @@ sub add_rule {
         $tree->accept($by_path);
 
         my $subtree = $by_path->getResult
-          || Catalyst::Exception->throw("The path '$path' does not exist (traversal path: @{[ $by_path->getResults ]})");
+          || Catalyst::Exception->throw("The path '$path' does not exist (traversal hit a dead end at: @{[ map { $_->getNodeValue } $by_path->getResults ]})");
         my $root_depth = $subtree->getDepth;
 
         my $descendents = Tree::Simple::Visitor::GetAllDescendents->new;
-        $tree->accept($descendents);
+        $subtree->accept($descendents);
+        
+        $self->app->log->debug("Adding ACL rule to the namespace $path") if $self->app->debug;
 
         foreach my $node ( $subtree, $descendents->getAllDescendents ) {
             my ( $container, $depth ) = ( $node->getNodeValue, $node->getDepth );
@@ -123,11 +127,7 @@ sub add_rule {
             foreach my $action ( grep { $filter->($_) }
                 values %{ $container->actions } )
             {
-                $self->app->log->debug(
-                        "$path contains the action $action (from "
-                      . $action->namespace
-                      . ")" )
-                  if $self->app->debug;
+                $self->app->log->debug( "... $action" ) if $self->app->debug;
                 $self->append_rule_to_action(
                     $action,
                     1 + ( $depth - $root_depth ), # how far an action is from the origin of the ACL
@@ -140,9 +140,6 @@ sub add_rule {
 
 sub append_rule_to_action {
     my ( $self, $action, $sort_index, $rule ) = @_;
-    $self->app->log->debug(
-        "appending $rule to $action with sort index $sort_index")
-      if $self->app->debug;
     $sort_index = 0 if $sort_index < 0;
     push @{ $self->get_action_data($action)->{rules_radix}[$sort_index] ||=
           [] }, $rule;

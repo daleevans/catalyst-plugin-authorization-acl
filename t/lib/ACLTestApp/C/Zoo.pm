@@ -8,17 +8,17 @@ use warnings;
 
 sub moose : Local {
 	my ( $self, $c ) = @_;
-	$c->res->write("moose ");
+	$c->res->body("moose");
 }
 
 sub elk : Local {
 	my ( $self, $c ) = @_;
-	$c->res->write("elk ");
+	$c->res->body("elk ");
 }
 
-sub rabbit : Local : harmless {
+sub rabbit : Local {
 	my ( $self, $c ) = @_;
-	$c->res->write("rabbit ");
+	$c->res->body("rabbit ");
 }
 
 __PACKAGE__;

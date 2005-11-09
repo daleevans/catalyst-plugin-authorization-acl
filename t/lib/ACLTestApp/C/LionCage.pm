@@ -8,7 +8,7 @@ use warnings;
 
 sub default : Private {
 	my ( $self, $c ) = @_;
-	$c->res->write( "no-one is allowed in here " );
+	$c->res->body( "no-one is allowed in here" );
 }
 
 __PACKAGE__;

@@ -8,12 +8,18 @@ use warnings;
 
 sub login : Local {
 	my ( $self, $c ) = @_;
-	$c->login;
+	$c->res->body( $c->login ? "login successful" : "login failed" );
 }
 
 sub logout : Local {
 	my ( $self, $c ) = @_;
 	$c->logout;
+	$c->res->body( "goodbye" );
+}
+
+sub check : Local {
+	my ( $self, $c ) = @_;
+	$c->res->body( $c->user ? "logged in" : "guest" );
 }
 
 __PACKAGE__;

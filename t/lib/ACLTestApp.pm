@@ -5,6 +5,10 @@ use warnings;
 no warnings 'uninitialized';
 
 use Catalyst qw/
+	Session
+	Session::Store::Dummy
+	Session::State::Cookie
+
 	Authentication
 	Authentication::Store::Minimal
 	Authentication::Credential::Password
@@ -13,27 +17,50 @@ use Catalyst qw/
 	Authorization::ACL
 /;
 
-sub default : Private {
+sub restricted : Local {
 	my ( $self, $c ) = @_;
-	$c->res->write( "welcome to the zoo!" );
-	
+	$c->res->body( "restricted" );
 }
 
-sub restricted {
+sub default : Private {
 	my ( $self, $c ) = @_;
-	$c->res->write( "restricted " );
+	$c->res->body( "welcome to the zoo!" );
+	
 }
 
 sub end : Private {
 	my ( $self, $c ) = @_;
-	$c->res->write( $c->error->[-1] =~ /denied/ ? "denied" : "allowed" );
+	$c->res->body( $c->res->body . ($c->error->[-1] =~ /denied/ ? "denied" : "allowed") );
 	$c->error( 0 );
 }
 
+__PACKAGE__->config->{authentication}{users} = {
+	foo => {
+		password => "bar"
+	},
+	gorch => {
+		password => "moose",
+		roles => [qw/child/],
+	},
+	quxx => {
+		password => "ding",
+		roles => [qw/moose_trainer/],
+	}
+};
+
 __PACKAGE__->setup;
 
-__PACKAGE__->deny_access_unless("/lioncage", sub { 0 });
+__PACKAGE__->deny_access_unless("/lioncage", [qw/zoo_worker lion_tamer/]); # only highly trained personnel can enter
 
-__PACKAGE__->deny_access_unless("/restricted", sub { 0 });
+__PACKAGE__->deny_access_unless("/restricted", sub { 0 }); # no one can access
+
+__PACKAGE__->deny_access_unless("/zoo", sub {
+	my ( $c, $action ) = @_;
+	$c->user;
+}); # only people who have bought a ticket can enter
+
+__PACKAGE__->deny_access_unless("/zoo/rabbit", ["child"]); # the petting zoo is for children
+
+__PACKAGE__->deny_access_unless("/zoo/moose", [qw/moose_trainer/]);
 
 __PACKAGE__
