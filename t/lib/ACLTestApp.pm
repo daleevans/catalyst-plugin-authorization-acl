@@ -17,6 +17,8 @@ use Catalyst qw/
 	Authorization::ACL
 /;
 
+use Catalyst::Plugin::Authorization::ACL::Engine qw/$DENIED $ALLOWED/;
+
 sub restricted : Local {
 	my ( $self, $c ) = @_;
 	$c->res->body( "restricted" );
@@ -36,15 +38,18 @@ sub end : Private {
 
 __PACKAGE__->config->{authentication}{users} = {
 	foo => {
-		password => "bar"
+		password => "bar",
+		os => "windows",
 	},
 	gorch => {
 		password => "moose",
 		roles => [qw/child/],
+		os => "linux",
 	},
 	quxx => {
 		password => "ding",
 		roles => [qw/moose_trainer/],
+		os => "osx",
 	}
 };
 
@@ -62,5 +67,11 @@ __PACKAGE__->deny_access_unless("/zoo", sub {
 __PACKAGE__->deny_access_unless("/zoo/rabbit", ["child"]); # the petting zoo is for children
 
 __PACKAGE__->deny_access_unless("/zoo/moose", [qw/moose_trainer/]);
+
+__PACKAGE__->acl_add_rule("/zoo/penguins/tux", sub {
+	my ( $c, $action ) = @_;
+	my $user = $c->user;
+	die ( ( $user && $user->os eq "linux" ) ? $ALLOWED : $DENIED );
+});
 
 __PACKAGE__

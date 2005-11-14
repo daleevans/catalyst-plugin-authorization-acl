@@ -30,6 +30,8 @@ is_denied("lioncage");
 is_denied("zoo/elk");
 is_denied("zoo/moose");
 is_denied("zoo/rabbit");
+is_denied("zoo/penguins/emperor");
+is_denied("zoo/penguins/tux");
 
 login(qw/foo bar/);
 
@@ -40,6 +42,8 @@ is_denied("lioncage");
 is_allowed("zoo/elk");
 is_denied("zoo/moose");
 is_denied("zoo/rabbit");
+is_allowed("zoo/penguins/emperor");
+is_denied("zoo/penguins/tux");
 
 is_allowed("auth/logout");
 
@@ -48,6 +52,8 @@ is_denied("lioncage");
 is_denied("zoo/elk");
 is_denied("zoo/moose");
 is_denied("zoo/rabbit");
+is_denied("zoo/penguins/emperor");
+is_denied("zoo/penguins/tux");
 
 login(qw/gorch moose/);
 
@@ -56,6 +62,8 @@ is_denied("zoo/moose");
 is_allowed("zoo/rabbit");
 is_denied("lioncage");
 is_denied("restricted");
+is_allowed("zoo/penguins/emperor");
+is_allowed("zoo/penguins/tux");
 
 login(qw/quxx ding/);
 
@@ -64,6 +72,8 @@ is_allowed("zoo/moose");
 is_denied("zoo/rabbit");
 is_denied("lioncage");
 is_denied("restricted");
+is_allowed("zoo/penguins/emperor");
+is_denied("zoo/penguins/tux");
 
 sub login {
 	my ( $l, $p ) = @_;
@@ -84,3 +94,4 @@ sub is_allowed {
 	$m->content_contains( $contains, "'$path' contains '$contains'") if $contains;
 	$m->content_like(qr/allowed$/, "access to '$path' is allowed");
 }
+

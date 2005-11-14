@@ -28,8 +28,9 @@ sub new {
     my ( $class, $c ) = @_;
 
     my $self = bless {
-        actions => {},
-        app     => $c,
+        actions  => {},
+        app      => $c,
+		cxt_info => {},
     }, $class;
 
     $self;
@@ -97,15 +98,20 @@ sub fudge_condition {
 
 sub add_rule {
     my ( $self, $path, $rule, $filter ) = @_;
-    $filter ||= sub { $_[0]->name !~ /^_/ }; # internal actions are not ACL'd
+    $filter ||= sub { $_[0]->name !~ /^_/ };    # internal actions are not ACL'd
 
     my $d = $self->app->dispatcher;
 
-    my ($ns, $name) = $path =~ m#^/?(.*?)/?([^/]+)$#;
+	my $cxt = _pretty_caller();
+
+	$self->{cxt_info}{$rule} = $cxt;
+	
+    my ( $ns, $name ) = $path =~ m#^/?(.*?)/?([^/]+)$#;
 
     if ( my $action = $d->get_action( $name, $ns ) ) {
-        $self->app->log->debug("Adding ACL rule to the action $path") if $self->app->debug;
-        $self->append_rule_to_action( $action, 0, $rule );
+        $self->app->log->debug("Adding ACL rule from $cxt to the action $path with sort index 0")
+          if $self->app->debug;
+        $self->append_rule_to_action( $action, 0, $rule, $cxt );
     }
     else {
         my $tree = $d->tree;
@@ -115,33 +121,45 @@ sub add_rule {
         $tree->accept($by_path);
 
         my $subtree = $by_path->getResult
-          || Catalyst::Exception->throw("The path '$path' does not exist (traversal hit a dead end at: @{[ map { $_->getNodeValue } $by_path->getResults ]})");
+          || Catalyst::Exception->throw(
+                "The path '$path' does not exist (traversal hit a dead end "
+              . "at: @{[ map { $_->getNodeValue } $by_path->getResults ]})" );
         my $root_depth = $subtree->getDepth;
 
         my $descendents = Tree::Simple::Visitor::GetAllDescendents->new;
+        $descendents->setNodeFilter( sub { $_[0] } );    #
         $subtree->accept($descendents);
-        
-        $self->app->log->debug("Adding ACL rule to the namespace $path") if $self->app->debug;
 
-        foreach my $node ( $subtree, $descendents->getAllDescendents ) {
-            my ( $container, $depth ) = ( $node->getNodeValue, $node->getDepth );
+        $self->app->log->debug("Adding ACL rule from $cxt to all the actions under $path")
+          if $self->app->debug;
+
+        foreach my $node ( $subtree, $descendents->getResults ) {
+            my ( $container, $depth ) =
+              ( $node->getNodeValue, $node->getDepth );
 
             foreach my $action ( grep { $filter->($_) }
                 values %{ $container->actions } )
             {
-                $self->app->log->debug( "... $action" ) if $self->app->debug;
+                my $sort_index = 1 + ( $depth - $root_depth ); # how far an action is from the origin of the ACL
+                $self->app->log->debug("... $action at sort index $sort_index") if $self->app->debug;
                 $self->append_rule_to_action(
                     $action,
-                    1 + ( $depth - $root_depth ), # how far an action is from the origin of the ACL
+					$sort_index,
                     $rule,
+					$cxt,
                 );
             }
         }
     }
 }
 
+sub get_cxt_for_rule {
+	my ( $self, $rule ) = @_;
+	$self->{cxt_info}{$rule};
+}
+
 sub append_rule_to_action {
-    my ( $self, $action, $sort_index, $rule ) = @_;
+    my ( $self, $action, $sort_index, $rule, $cxt ) = @_;
     $sort_index = 0 if $sort_index < 0;
     push @{ $self->get_action_data($action)->{rules_radix}[$sort_index] ||=
           [] }, $rule;
@@ -165,9 +183,8 @@ sub check_action_rules {
 
     my $last_rule;
     eval {
-        foreach my $rule ( $self->get_rules($action) )
-        {
-            $c->log->debug("running ACL rule $rule on $action") if $c->debug;
+        foreach my $rule ( $self->get_rules($action) ) {
+            $c->log->debug("running ACL rule $rule defined at " . $self->get_cxt_for_rule($rule) . " on $action") if $c->debug;
             $last_rule = $rule;
             $c->$rule($action);
         }
@@ -175,9 +192,10 @@ sub check_action_rules {
 
     if ($@) {
         if ( ref $@ and $@ == $DENIED ) {
-            die "Access to $action denied by rule $last_rule.\n";
+            die "Access to $action denied by rule $last_rule (defined at " . $self->get_cxt_for_rule($last_rule) . ").\n";
         }
         elsif ( ref $@ and $@ == $ALLOWED ) {
+            $c->log->debug("Access to $action allowed by rule $last_rule (defined at " . $self->get_cxt_for_rule($last_rule) . ")") if $c->debug;
             return;
         }
         else {
@@ -191,6 +209,18 @@ sub check_action_rules {
     }
 
     # no rules means allow by default
+}
+
+sub _pretty_caller {
+	my ( undef, $file, $line ) = _find_caller();
+	return "$file line $line";	
+}
+
+sub _find_caller {
+	for (my $i = 2; ; $i++) {
+		my @caller = caller($i) or die "Error determining caller";
+		return @caller if $caller[0] !~ /^Catalyst::Plugin::Authorization::ACL/;
+	}
 }
 
 __PACKAGE__;
