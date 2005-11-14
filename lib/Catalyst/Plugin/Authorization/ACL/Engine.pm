@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 package Catalyst::Plugin::Authorization::ACL::Engine;
-use base qw/Class::Accessor::Fast/;
+use base qw/Class::Accessor::Fast Exporter/;
 
 use strict;
 use warnings;
@@ -21,6 +21,8 @@ BEGIN { __PACKAGE__->mk_accessors(qw/app actions/) }
 
 our $DENIED  = bless {}, __PACKAGE__ . "::Denied";
 our $ALLOWED = bless {}, __PACKAGE__ . "::Allowed";
+
+our @EXPORT_OK = qw/$DENIED $ALLOWED/;
 
 sub new {
     my ( $class, $c ) = @_;
@@ -207,6 +209,9 @@ checks for L<Catalyst::Plugin::Authorization::ACL>.
 	# internal
 
 =head1 DESCRIPTION
+
+This is the engine which executes the access control checks for
+L<Catalyst::Plugin::Authorization::ACL>. Please use that module directly.
 
 =cut
 
