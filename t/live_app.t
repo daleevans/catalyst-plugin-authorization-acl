@@ -5,7 +5,18 @@ use warnings;
 
 use lib "t/lib";
 
-use Test::More 'no_plan';
+use Test::More;
+use Test::Plan;
+
+BEGIN {
+	plan 'no_plan', map { need_module($_) } qw/
+		Catalyst::Plugin::Authorization::Roles
+		Catalyst::Plugin::Authentication
+		Catalyst::Plugin::Session
+		Catalyst::Plugin::Session::State::Cookie
+	/;
+}
+	
 use Test::WWW::Mechanize::Catalyst 'ACLTestApp';
 
 my $m = Test::WWW::Mechanize::Catalyst->new;
