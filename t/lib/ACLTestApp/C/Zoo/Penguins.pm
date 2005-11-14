@@ -16,6 +16,11 @@ sub tux : Local {
 	$c->res->body("tux");
 }
 
+sub madagascar : Local {
+	my ( $self, $c ) = @_;
+	$c->res->body("madagascar");
+}
+
 __PACKAGE__;
 
 __END__

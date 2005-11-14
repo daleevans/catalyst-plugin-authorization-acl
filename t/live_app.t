@@ -32,6 +32,7 @@ is_denied("zoo/moose");
 is_denied("zoo/rabbit");
 is_denied("zoo/penguins/emperor");
 is_denied("zoo/penguins/tux");
+is_denied("zoo/penguins/madagascar");
 
 login(qw/foo bar/);
 
@@ -44,6 +45,7 @@ is_denied("zoo/moose");
 is_denied("zoo/rabbit");
 is_allowed("zoo/penguins/emperor");
 is_denied("zoo/penguins/tux");
+is_allowed("zoo/penguins/madagascar");
 
 is_allowed("auth/logout");
 
@@ -54,6 +56,7 @@ is_denied("zoo/moose");
 is_denied("zoo/rabbit");
 is_denied("zoo/penguins/emperor");
 is_denied("zoo/penguins/tux");
+is_denied("zoo/penguins/madagascar");
 
 login(qw/gorch moose/);
 
@@ -64,6 +67,7 @@ is_denied("lioncage");
 is_denied("restricted");
 is_allowed("zoo/penguins/emperor");
 is_allowed("zoo/penguins/tux");
+is_allowed("zoo/penguins/madagascar");
 
 login(qw/quxx ding/);
 
@@ -74,6 +78,7 @@ is_denied("lioncage");
 is_denied("restricted");
 is_allowed("zoo/penguins/emperor");
 is_denied("zoo/penguins/tux");
+is_allowed("zoo/penguins/madagascar");
 
 sub login {
 	my ( $l, $p ) = @_;

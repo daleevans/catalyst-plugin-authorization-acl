@@ -74,4 +74,10 @@ __PACKAGE__->acl_add_rule("/zoo/penguins/tux", sub {
 	die ( ( $user && $user->os eq "linux" ) ? $ALLOWED : $DENIED );
 });
 
+__PACKAGE__->allow_access_if("/zoo/penguins/madagascar", sub { 
+	my ( $c, $action ) = @_;
+	my $user = $c->user;
+	$user && $user->os ne "windows";
+});
+
 __PACKAGE__
