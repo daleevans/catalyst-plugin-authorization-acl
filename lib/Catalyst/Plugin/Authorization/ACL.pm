@@ -20,7 +20,9 @@ sub execute {
 		eval { $c->_acl_engine->check_action_rules( $c, $action ) };
 
 		if ( my $err = $@ ) {
-			return $c->NEXT::execute( $class, sub { die $err });
+			return $c->acl_access_denied( $class, $action, $err );
+		} else {
+			$c->acl_access_allowed( $class, $action );
 		}
 		
     }
@@ -50,6 +52,20 @@ sub allow_access_if {
 sub acl_add_rule {
     my $c = shift;
     $c->_acl_engine->add_rule( @_ );
+}
+
+sub acl_access_denied {
+	my ( $c, $class, $action, $err ) = @_;
+	
+	if ( my $handler = ( $c->get_actions( "access_denied" , $action->namespace ) )[-1] ) {
+		$handler->execute( $c );
+	} else {
+		return $c->execute( $class, sub { die $err });
+	}
+}
+
+sub acl_access_allowed {
+
 }
 
 __PACKAGE__;
