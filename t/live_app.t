@@ -10,6 +10,7 @@ use Test::Plan;
 
 BEGIN {
 	plan 'no_plan', map { need_module($_) } qw/
+		Test::WWW::Mechanize::Catalyst
 		Catalyst::Plugin::Authorization::Roles
 		Catalyst::Plugin::Authentication
 		Catalyst::Plugin::Session
