@@ -267,6 +267,16 @@ or denying access based on how much mojo the current user has:
 		}
 	);
 
+=head1 AUTHOR
+
+Yuval Kogman, C<nothingmuch@woobling.org>
+
+=head1 COPYRIGHT & LICNESE
+
+	Copyright (c) 2005 the aforementioned authors. All rights
+	reserved. This program is free software; you can redistribute
+	it and/or modify it under the same terms as Perl itself.
+
 =cut
 
 
