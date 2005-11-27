@@ -267,6 +267,10 @@ or denying access based on how much mojo the current user has:
 		}
 	);
 
+=head1 SEE ALSO
+
+L<Catalyst::Plugin::Authentication>, L<Catalyst::Plugin::Authorization::Roles>
+
 =head1 AUTHOR
 
 Yuval Kogman, C<nothingmuch@woobling.org>
