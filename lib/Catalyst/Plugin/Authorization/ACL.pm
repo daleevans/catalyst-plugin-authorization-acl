@@ -134,7 +134,7 @@ continues until a rule explcitly allows or denies access.
 
 =head1 METHODS
 
-=item allow_access_if $path, $rule
+=head2 allow_access_if $path, $rule
 
 Check the rule condition and allow access to the actions under C<$path> if
 the rule returns true.
@@ -146,7 +146,7 @@ If the rule test returns false access is not denied or allowed. Instead
 the next rule in the chain will be checked - in this sense the combinatory 
 behavior of these rules is like logical B<OR>.
 
-=item deny_access_unless $path, $rule
+=head2 deny_access_unless $path, $rule
 
 Check the rule condition and disallow access if the rule returns false.
 
@@ -157,7 +157,7 @@ If the rule test returns true access is not allowed or denied. Instead the
 next rule in the chain will be checked - in this sense the combinatory 
 behavior of these rules is like logical B<AND>.
 
-=item acl_add_rule $path, $rule, [ $filter ]
+=head2 acl_add_rule $path, $rule, [ $filter ]
 
 Manually add a rule to all the actions under C<$path> using the more flexible 
 (but more verbose) method:
@@ -265,7 +265,7 @@ user has:
 		"/foo",
 		sub {
 			my ( $c, $action ) = @_;	
-			
+
 			if ( $c->user->mojo > 50 ) {
 				die $ALLOWED;
 			} else {

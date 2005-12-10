@@ -13,12 +13,6 @@ use Tree::Simple::Visitor::GetAllDescendents;
 
 BEGIN { __PACKAGE__->mk_accessors(qw/app actions/) }
 
-=todo
-
-	* external uris -> private paths
-
-=cut
-
 our $DENIED  = bless {}, __PACKAGE__ . "::Denied";
 our $ALLOWED = bless {}, __PACKAGE__ . "::Allowed";
 
@@ -259,6 +253,9 @@ checks for L<Catalyst::Plugin::Authorization::ACL>.
 This is the engine which executes the access control checks for
 L<Catalyst::Plugin::Authorization::ACL>. Please use that module directly.
 
-=cut
+=head1 TODO
 
+    * external uris -> private paths
+
+=cut
 
