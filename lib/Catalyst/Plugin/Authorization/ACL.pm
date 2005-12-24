@@ -16,60 +16,76 @@ our $VERSION = "0.04";
 sub execute {
     my ( $c, $class, $action ) = @_;
 
-	local $NEXT::NEXT{$c, "execute"};
+    local $NEXT::NEXT{ $c, "execute" };
 
-    if ( Scalar::Util::blessed($action) and $action->name ne "ACL error rethrower" ) {
-		eval { $c->_acl_engine->check_action_rules( $c, $action ) };
+    if (    Scalar::Util::blessed($action)
+        and $action->name ne "access_denied"
+        and $action->name ne "ACL error rethrower" )
+    {
+        eval { $c->_acl_engine->check_action_rules( $c, $action ) };
 
-		if ( my $err = $@ ) {
-			return $c->acl_access_denied( $class, $action, $err );
-		} else {
-			$c->acl_access_allowed( $class, $action );
-		}
-		
+        if ( my $err = $@ ) {
+            return $c->acl_access_denied( $class, $action, $err );
+        }
+        else {
+            $c->acl_access_allowed( $class, $action );
+        }
+
     }
 
     $c->NEXT::execute( $class, $action );
 }
 
+sub acl_allow_root_internals {
+    my $app = shift;
+    $app->allow_access_if( "/$_", sub { 1 } ) for qw/begin auto end/;
+}
+
 sub setup {
     my $app = shift;
-    my $ret = $app->NEXT::setup( @_ );
+    my $ret = $app->NEXT::setup(@_);
 
-    $app->_acl_engine( Catalyst::Plugin::Authorization::ACL::Engine->new($app) );
-    
+    $app->_acl_engine(
+        Catalyst::Plugin::Authorization::ACL::Engine->new($app) );
+
     $ret;
 }
 
 sub deny_access_unless {
     my $c = shift;
-    $c->_acl_engine->add_deny( @_ );
+    $c->_acl_engine->add_deny(@_);
 }
 
 sub allow_access_if {
     my $c = shift;
-    $c->_acl_engine->add_allow( @_ );
+    $c->_acl_engine->add_allow(@_);
 }
 
 sub acl_add_rule {
     my $c = shift;
-    $c->_acl_engine->add_rule( @_ );
+    $c->_acl_engine->add_rule(@_);
 }
 
 sub acl_access_denied {
-	my ( $c, $class, $action, $err ) = @_;
-	
-	if ( my $handler = ( $c->get_actions( "access_denied" , $action->namespace ) )[-1] ) {
-		$handler->execute( $c );
-	} else {
-		return $c->execute(
+    my ( $c, $class, $action, $err ) = @_;
+
+    if ( my $handler =
+        ( $c->get_actions( "access_denied", $action->namespace ) )[-1] )
+    {
+        $handler->execute($c);
+    }
+    else {
+        return $c->execute(
             $class,
-            bless({
-                code => sub { die $err },
-                name => "ACL error rethrower",
-            }, "Catalyst::Action"),
+            bless(
+                {
+                    code => sub { die $err },
+                    name => "ACL error rethrower",
+                },
+                "Catalyst::Action"
+            ),
         );
-	}
+    }
 }
 
 sub acl_access_allowed {
