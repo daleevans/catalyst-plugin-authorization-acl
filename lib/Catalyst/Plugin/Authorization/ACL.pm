@@ -62,7 +62,13 @@ sub acl_access_denied {
 	if ( my $handler = ( $c->get_actions( "access_denied" , $action->namespace ) )[-1] ) {
 		$handler->execute( $c );
 	} else {
-		return $c->execute( $class, sub { die $err });
+		return $c->execute(
+            $class,
+            bless({
+                code => sub { die $err },
+                name => "ACL error rethrower",
+            }, "Catalyst::Action"),
+        );
 	}
 }
 
