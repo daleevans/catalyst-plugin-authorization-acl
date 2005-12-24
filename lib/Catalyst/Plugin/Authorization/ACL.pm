@@ -18,7 +18,7 @@ sub execute {
 
 	local $NEXT::NEXT{$c, "execute"};
 
-    if ( Scalar::Util::blessed($action) ) {
+    if ( Scalar::Util::blessed($action) and $action->name ne "ACL error rethrower" ) {
 		eval { $c->_acl_engine->check_action_rules( $c, $action ) };
 
 		if ( my $err = $@ ) {
