@@ -38,7 +38,7 @@ sub execute {
 
 sub acl_allow_root_internals {
     my $app = shift;
-    $app->allow_access_if( "/$_", sub { 1 } ) for qw/begin auto end/;
+    $app->allow_access_if( "/$_", sub { 1 } ) for grep { $app->can($_) } qw/begin auto end/;
 }
 
 sub setup {
