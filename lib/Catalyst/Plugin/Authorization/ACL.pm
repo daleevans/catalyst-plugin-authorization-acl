@@ -72,6 +72,7 @@ sub acl_access_denied {
     if ( my $handler =
         ( $c->get_actions( "access_denied", $action->namespace ) )[-1] )
     {
+        local @{ $c->req->args } = ( $action, $err );
         $handler->execute($c);
     }
     else {
