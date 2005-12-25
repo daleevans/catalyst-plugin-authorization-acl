@@ -6,6 +6,7 @@ use base qw/Class::Data::Inheritable/;
 use strict;
 use warnings;
 
+use NEXT;
 use Scalar::Util ();
 use Catalyst::Plugin::Authorization::ACL::Engine;
 
@@ -201,6 +202,26 @@ $c.
 The default filter will skip all actions starting with an underscore, namely
 C<_DISPATCH>, C<_AUTO>, etc (but not C<auto>, C<begin>, et al).
 
+=head2 acl_access_denied $c, $class, $action, $err
+
+=head2 acl_access_allowed $c, $class, $action
+
+The default event handlers for access denied or allowed conditions. See below
+on handling access violations.
+
+=head2 acl_allow_root_internals
+
+Adds rules that permit access to the root controller (YourApp.pm) C<auto>,
+C<begin> and C<end> unconditionally.
+
+=head1 EXTENDED METHODS
+
+=head2 execute
+
+The hook for rule evaluation
+
+=head2 setup
+
 =head1 RULE EVALUATION
 
 When a rule is attached to an action the "distance" from the path it was
@@ -229,7 +250,7 @@ path to which the rule was applied.
 
 =head1 RULES
 
-=head2 EASY RULES
+=head2 Easy Rules
 
 There are several kinds of rules you can create without using the complex
 interface described in L</FLEXIBLE RULES>.
@@ -268,7 +289,7 @@ using L<UNIVERSAL/can>.
 
 =back
 
-=head2 FLEXIBLE RULES
+=head2 Flexible Rules
 
 These rules are the most annoying to write but provide the most flexibility.
 
@@ -297,9 +318,81 @@ user has:
 		}
 	);
 
+=head1 HANDLING DENIAL
+
+There are two plugin methods that can be called when a rule makes a decision
+about an action:
+
+=over 4
+
+=item acl_access_allowed
+
+A no-op
+
+=item acl_access_denied
+
+Looks for a private action named C<access_denied> from the denied action's
+controller and outwards (much like C<auto>), and if none is found throws an
+access denied exception.
+
+=back
+
+This means that you have several alternatives:
+
+=head2 Provide an C<access_denied> action
+
+    package MyApp::Controller::Foo;
+
+    sub access_denied : Private {
+        my ( $self, $c, $action ) = @_;
+
+        ...
+
+    }
+
+Note that after this private action is finished B<EXECUTION RESUMES NORMALLY>!
+You B<absolutely must> throw a C<$Catalyst::DETACH> error, or detach to some
+other action.
+
+In the future it may be an on-by-default configuration option to always detach
+after access_denied for security reliability reasons.
+
+=head2 Cleanup in C<end>
+
+    sub end : Private {
+        my ( $self, $c ) = @_;
+
+        if ( $c->error and $c->error->[-1] eq "access denied" ) {
+            $c->error(0); # clear the error
+            
+            # access denied
+        } else {
+            # normal end
+        }
+    }
+
+=head2 Override the plugin event handler methods
+
+    package MyApp;
+
+    sub acl_access_allowed {
+        my ( $c, $class, $action ) = @_;
+        ...
+    }
+
+    sub acl_access_denied {
+        my ( $c, $class, $action, $err ) = @_;
+        ...
+    }
+
+C<$class> is the controller class the C<$action> object was going to be
+executed in, and C<$err> is the exception cought during rule evaluation, if
+any (access is denied if a rule raises an exception).
+
 =head1 SEE ALSO
 
-L<Catalyst::Plugin::Authentication>, L<Catalyst::Plugin::Authorization::Roles>
+L<Catalyst::Plugin::Authentication>, L<Catalyst::Plugin::Authorization::Roles>,
+L<http://catalyst.perl.org/calendar/2005/24>
 
 =head1 AUTHOR
 

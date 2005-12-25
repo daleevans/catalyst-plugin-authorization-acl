@@ -248,6 +248,45 @@ checks for L<Catalyst::Plugin::Authorization::ACL>.
 
 	# internal
 
+=head1 METHODS
+
+=over 4
+
+=item new $app
+
+Create a new rule engine for $app
+
+=item add_allow $cond
+
+=item add_deny $cond
+
+fudge C<$cond>, make cond into a rule, and C<add_rule>
+
+=item add_rule $path, $rule
+
+Add rule to all actions under $path
+
+=item append_rule_to_action $action, $index, $rule, $cxt
+
+Append C<$rule> to C<$action> in slot C<$index>, and store context info C<$cxt>
+for error reporting.
+
+=item check_action_rules $action
+
+Evaluate the rules for an action
+
+=item fudge_condition $thingy
+
+Converts a C<$thingy> into a subref, for DWIM goodness. See the main ACL docs.
+
+=item get_action_data $action
+
+=item get_cxt_for_rule $rule
+
+=item get_rules
+
+=back
+
 =head1 DESCRIPTION
 
 This is the engine which executes the access control checks for
