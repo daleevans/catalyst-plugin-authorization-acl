@@ -81,12 +81,10 @@ sub fudge_condition {
             $c->check_user_roles(@$condition);
         };
     }
-    else {
-        $self->app->can($condition)
-          or die "Can't use string '$condition' as an ACL "
-          . "condition unless \$c->can('$condition').";
-
+    elsif ( $self->app->can($condition) ) { 
         return $condition;    # just a method name
+    } else {
+        return sub { $condition };
     }
 }
 
