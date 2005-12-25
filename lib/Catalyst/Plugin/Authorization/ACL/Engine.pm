@@ -10,6 +10,7 @@ use warnings;
 use Class::Throwable;
 use Tree::Simple::Visitor::FindByPath;
 use Tree::Simple::Visitor::GetAllDescendents;
+use Carp qw/croak/;
 
 BEGIN { __PACKAGE__->mk_accessors(qw/app actions/) }
 
@@ -62,7 +63,16 @@ sub fudge_condition {
     my ( $self, $condition ) = @_;
 
     # make almost anything into a code ref/method name
-    if ( my $reftype = ref $condition ) {
+
+    if (!defined($condition)
+        # no warnings
+        or $condition eq '1'
+        or $condition eq '0'
+        or $condition eq "" )
+    {
+        return sub { $condition };
+    }
+    elsif ( my $reftype = ref $condition ) {
         $reftype eq "CODE" and return $condition;
 
         # if it's not a code ref and it's a ref, we only know
@@ -81,10 +91,12 @@ sub fudge_condition {
             $c->check_user_roles(@$condition);
         };
     }
-    elsif ( $self->app->can($condition) ) { 
+    elsif ( $self->app->can($condition) ) {
         return $condition;    # just a method name
-    } else {
-        return sub { $condition };
+    }
+    else {
+        croak "Can't use '$condition' as an ACL "
+          . "condition unless \$c->can('$condition').";
     }
 }
 

@@ -21,7 +21,8 @@ sub bar : Local {
 sub end : Private {
     my ( $self, $c ) = @_;
 
-    $c->res->body( join " ", ( $c->stash->{denied} || @{ $c->error } ? "denied" : "allowed" ),
+    $c->res->body( join " ",
+        ( $c->stash->{denied} || @{ $c->error } ? "denied" : "allowed" ),
         $c->res->body );
 }
 
@@ -36,7 +37,7 @@ sub access_denied : Private {
 
 __PACKAGE__->setup;
 
-__PACKAGE__->deny_access_unless( "/", 0 );
+__PACKAGE__->deny_access("/");
 
-__PACKAGE__->allow_access_if( "/bar", 1 );
+__PACKAGE__->allow_access("/bar");
 

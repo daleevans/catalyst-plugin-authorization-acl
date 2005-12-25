@@ -57,9 +57,19 @@ sub deny_access_unless {
     $c->_acl_engine->add_deny(@_);
 }
 
+sub deny_access {
+    my $c = shift;
+    $c->deny_access_unless( @_, undef );
+}
+
 sub allow_access_if {
     my $c = shift;
     $c->_acl_engine->add_allow(@_);
+}
+
+sub allow_access {
+    my $c = shift;
+    $c->allow_access_if( @_, 1 );
 }
 
 sub acl_add_rule {
@@ -181,6 +191,12 @@ If the rule test returns true access is not allowed or denied. Instead the
 next rule in the chain will be checked - in this sense the combinatory 
 behavior of these rules is like logical B<AND>.
 
+=head2 allow_access $path
+
+=head2 deny_access $path
+
+Unconditionally allow or deny access to a path.
+
 =head2 acl_add_rule $path, $rule, [ $filter ]
 
 Manually add a rule to all the actions under C<$path> using the more flexible 
@@ -286,6 +302,11 @@ objects. The boolean return value will determine the behavior of the rule.
 
 When specifying a method name the rule engine ensures that it can be invoked
 using L<UNIVERSAL/can>.
+
+=item Constant
+
+You can use C<undef>, C<0> and C<''> to use as a constant false predicate, or
+C<1> to use as a constant true predicate.
 
 =back
 
