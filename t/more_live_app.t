@@ -11,7 +11,7 @@ BEGIN {
     eval {
 		require Test::WWW::Mechanize::Catalyst;
     } or plan 'skip_all' => "A bunch of plugins are required for this test... Look in the source if you really care... $@";
-    plan tests => 8;
+    plan tests => 10;
 }
 
 
@@ -35,3 +35,5 @@ $m->content_contains( "denied handled", "denied, handled" );
 $m->get_ok( "$u/bar", "get bar" );
 $m->content_contains( "allowed bar", "allowed" );
 
+$m->get_ok( "$u/gorch", "get gorch" );
+$m->content_contains( "denied handled gorch", "denied but overridden by handler" );

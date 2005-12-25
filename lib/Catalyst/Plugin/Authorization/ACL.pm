@@ -10,9 +10,14 @@ use NEXT;
 use Scalar::Util ();
 use Catalyst::Plugin::Authorization::ACL::Engine;
 
+# TODO
+# refactor forcibly_allow_access so that the guts are cleaner
+
 BEGIN { __PACKAGE__->mk_classdata("_acl_engine") }
 
 our $VERSION = "0.04";
+
+my $FORCE_ALLOW = bless {}, __PACKAGE__ . "::Exception";
 
 sub execute {
     my ( $c, $class, $action ) = @_;
@@ -26,7 +31,8 @@ sub execute {
         eval { $c->_acl_engine->check_action_rules( $c, $action ) };
 
         if ( my $err = $@ ) {
-            return $c->acl_access_denied( $class, $action, $err );
+            my $force_allow = $c->acl_access_denied( $class, $action, $err );
+            return unless $force_allow;
         }
         else {
             $c->acl_access_allowed( $class, $action );
@@ -39,7 +45,8 @@ sub execute {
 
 sub acl_allow_root_internals {
     my $app = shift;
-    $app->allow_access_if( "/$_", sub { 1 } ) for grep { $app->can($_) } qw/begin auto end/;
+    $app->allow_access_if( "/$_", sub { 1 } )
+      for grep { $app->can($_) } qw/begin auto end/;
 }
 
 sub setup {
@@ -84,10 +91,16 @@ sub acl_access_denied {
         ( $c->get_actions( "access_denied", $action->namespace ) )[-1] )
     {
         local @{ $c->req->args } = ( $action, $err );
-        $handler->execute($c);
+        local $c->{_acl_forcibly_allowed} = undef;
+
+        eval { $handler->execute($c) };
+
+        return 1 if $c->{_acl_forcibly_allowed};
+        
+        die $@ || $Catalyst::DETACH;
     }
     else {
-        return $c->execute(
+        $c->execute(
             $class,
             bless(
                 {
@@ -97,7 +110,15 @@ sub acl_access_denied {
                 "Catalyst::Action"
             ),
         );
+
+        return;
     }
+}
+
+sub forcibly_allow_access {
+    my $c = shift;
+    $c->{_acl_forcibly_allowed} = 1;
+    die $Catalyst::DETACH;
 }
 
 sub acl_access_allowed {

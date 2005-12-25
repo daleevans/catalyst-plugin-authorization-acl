@@ -10,12 +10,17 @@ use Catalyst qw/
 
 sub foo : Local {
     my ( $self, $c ) = @_;
-    $c->res->body("foo");
+    $c->res->body( $c->res->body . "foo");
 }
 
 sub bar : Local {
     my ( $self, $c ) = @_;
-    $c->res->body("bar");
+    $c->res->body( $c->res->body . "bar");
+}
+
+sub gorch : Local {
+    my ( $self, $c ) = @_;
+    $c->res->body( $c->res->body . "gorch");
 }
 
 sub end : Private {
@@ -32,7 +37,8 @@ sub access_denied : Private {
     $c->res->body( join " ", "handled", $c->res->body );
 
     $c->stash->{denied} = 1;
-    die $Catalyst::DETACH;
+
+    $c->forcibly_allow_access if $c->action->name eq "gorch";
 }
 
 __PACKAGE__->setup;
