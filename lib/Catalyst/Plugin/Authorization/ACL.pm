@@ -443,6 +443,7 @@ L<http://catalyst.perl.org/calendar/2005/24>
 =head1 AUTHOR
 
 Yuval Kogman, C<nothingmuch@woobling.org>
+
 Jess Robinson
 
 =head1 COPYRIGHT & LICENCE
