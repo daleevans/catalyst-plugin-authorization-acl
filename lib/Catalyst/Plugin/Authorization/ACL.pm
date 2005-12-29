@@ -150,7 +150,7 @@ Catalyst::Plugin::Authorization::ACL - ACL support for L<Catalyst> applications.
 		[qw/nice_role/],
 	);
 
-	__PACKAGE__>allow_access_if(
+	__PACKAGE__->allow_access_if(
 		"/foo/bar/gorch",
 		sub { return $boolean },
 	);
