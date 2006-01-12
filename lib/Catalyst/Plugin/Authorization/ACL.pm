@@ -44,17 +44,34 @@ sub execute {
 }
 
 sub acl_allow_root_internals {
-    my $app = shift;
+    my ( $app, $cmp ) = @_;
     $app->allow_access_if( "/$_", sub { 1 } )
       for grep { $app->can($_) } qw/begin auto end/;
 }
 
-sub setup {
+sub setup_actions {
     my $app = shift;
-    my $ret = $app->NEXT::setup(@_);
+    my $ret = $app->NEXT::setup_actions(@_);
 
     $app->_acl_engine(
         Catalyst::Plugin::Authorization::ACL::Engine->new($app) );
+
+    if ( my $config = $app->config->{acl} ) {
+        foreach my $action ( qw/allow deny/ ) {
+            my $method = "${action}_access";
+            if ( my $paths = $config->{$action} ) {
+                $app->$method( $_ ) for @$paths;
+            }
+
+            my $cond = ( $action eq "allow" ? "if" : "unless" );
+            $method .= "_$cond";
+
+            if ( my $args = $config->{"${action}_$cond"} ) {
+                my ( $cond, @paths ) = @$args;
+                $app->$method( $cond, $_ ) for @paths;
+            }
+        }
+    }
 
     $ret;
 }
