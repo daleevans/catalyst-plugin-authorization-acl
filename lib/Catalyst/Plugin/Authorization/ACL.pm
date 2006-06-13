@@ -110,7 +110,7 @@ sub acl_access_denied {
         local @{ $c->req->args } = ( $action, $err );
         local $c->{_acl_forcibly_allowed} = undef;
 
-        eval { $handler->execute($c) };
+        eval { $c->execute($class, $handler) };
 
         return 1 if $c->{_acl_forcibly_allowed};
         
