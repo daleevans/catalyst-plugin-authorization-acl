@@ -16,6 +16,8 @@
 \bBuild$
 \b_build
 
+\.DS_Store$
+
 # Avoid temp and backup files.
 ~$
 \.tmp$
