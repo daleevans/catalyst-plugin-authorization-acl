@@ -15,7 +15,7 @@ use Catalyst::Plugin::Authorization::ACL::Engine;
 
 BEGIN { __PACKAGE__->mk_classdata("_acl_engine") }
 
-our $VERSION = "0.06";
+our $VERSION = "0.07";
 
 my $FORCE_ALLOW = bless {}, __PACKAGE__ . "::Exception";
 
@@ -274,7 +274,7 @@ C<begin> and C<end> unconditionally.
 
 The hook for rule evaluation
 
-=head2 setup
+=head2 setup_actions
 
 =head1 RULE EVALUATION
 
