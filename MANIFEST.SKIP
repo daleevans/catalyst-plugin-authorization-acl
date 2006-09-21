@@ -26,3 +26,6 @@
 \#$
 \b\.#
 ^..*\.sw[po]$
+
+# hate Module::Build
+\bBuild.PL$
