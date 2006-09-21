@@ -46,10 +46,9 @@ sub execute {
 sub acl_allow_root_internals {
     my ( $app, $cmp ) = @_;
 
-    my $root = $app->controller("Root") || $app;
-
-    $app->allow_access("/$_")
-      for grep { $root->can($_) } qw/begin auto end/;
+    foreach my $action ( qw/begin auto end/ ) {
+        $app->allow_access("/$action") if $app->get_action($action, "/");
+    }
 }
 
 sub setup_actions {
