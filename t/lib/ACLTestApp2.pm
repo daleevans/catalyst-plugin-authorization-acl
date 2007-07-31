@@ -19,8 +19,9 @@ sub bar : Local {
 }
 
 sub gorch : Local {
-    my ( $self, $c ) = @_;
+    my ( $self, $c, $frozjob ) = @_;
     $c->res->body( $c->res->body . "gorch");
+    $c->res->body( $c->res->body . "&frozjob=$frozjob");
 }
 
 sub end : Private {
