@@ -115,7 +115,7 @@ sub acl_access_denied {
         eval { $c->execute($class, $handler) };
 
         return 1 if $c->{_acl_forcibly_allowed};
-        
+
         die $@ || $Catalyst::DETACH;
     }
     else {
@@ -176,8 +176,8 @@ Catalyst::Plugin::Authorization::ACL - ACL support for L<Catalyst> applications.
 
 =head1 DESCRIPTION
 
-This module provides Access Control List style path protection, with arbitrary 
-rules for L<Catalyst> applications. It operates only on the L<Catalyst> 
+This module provides Access Control List style path protection, with arbitrary
+rules for L<Catalyst> applications. It operates only on the L<Catalyst>
 private namespace, at least at the moment.
 
 The two hierarchies of actions and controllers in L<Catalyst> are:
@@ -186,7 +186,7 @@ The two hierarchies of actions and controllers in L<Catalyst> are:
 
 =item Private Namespace
 
-Every action has it's own private path. This path reflects the Perl namespaces
+Every action has its own private path. This path reflects the Perl namespaces
 the actions were born in, and the namespaces of their controllers.
 
 =item External Namespace
@@ -202,8 +202,8 @@ future extensions may be made to support external namespaces as well.
 
 Various types of rules are supported, see the list under L</RULES>.
 
-When a path is visited, rules are tested one after the other, with the most 
-exact rule fitting the path first, and continuing up the path. Testing 
+When a path is visited, rules are tested one after the other, with the most
+exact rule fitting the path first, and continuing up the path. Testing
 continues until a rule explcitly allows or denies access.
 
 =head1 METHODS
@@ -217,7 +217,7 @@ This is normally useful to allow acces only to a specific part of a tree whose
 parent has a C<deny_access_unless> clause attached to it.
 
 If the rule test returns false access is not denied or allowed. Instead
-the next rule in the chain will be checked - in this sense the combinatory 
+the next rule in the chain will be checked - in this sense the combinatory
 behavior of these rules is like logical B<OR>.
 
 =head2 deny_access_unless $path, $rule
@@ -228,7 +228,7 @@ This is normally useful to restrict access to any portion of the application
 unless a certain condition can be met.
 
 If the rule test returns true access is not allowed or denied. Instead the
-next rule in the chain will be checked - in this sense the combinatory 
+next rule in the chain will be checked - in this sense the combinatory
 behavior of these rules is like logical B<AND>.
 
 =head2 allow_access $path
@@ -239,7 +239,7 @@ Unconditionally allow or deny access to a path.
 
 =head2 acl_add_rule $path, $rule, [ $filter ]
 
-Manually add a rule to all the actions under C<$path> using the more flexible 
+Manually add a rule to all the actions under C<$path> using the more flexible
 (but more verbose) method:
 
 	__PACKAGE__->acl_add_rule(
@@ -362,14 +362,14 @@ imported from the engine module).
 If no rule decides to explicitly allow or deny access, access will be
 permitted.
 
-Here is a rule that will always break out of rule processing by either 
-explicitly allowing or denying access based on how much mojo the current 
+Here is a rule that will always break out of rule processing by either
+explicitly allowing or denying access based on how much mojo the current
 user has:
 
 	__PACKAGE__->acl_add_rule(
 		"/foo",
 		sub {
-			my ( $c, $action ) = @_;	
+			my ( $c, $action ) = @_;
 
 			if ( $c->user->mojo > 50 ) {
 				die $ALLOWED;
@@ -429,7 +429,7 @@ return to it's caller or end.
 
         if ( $c->error and $c->error->[-1] eq "access denied" ) {
             $c->error(0); # clear the error
-            
+
             # access denied
         } else {
             # normal end
