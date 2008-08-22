@@ -33,8 +33,9 @@ sub end : Private {
 }
 
 sub access_denied : Private {
-    my ( $self, $c, $action ) = @_;
+    my ( $self, $c, $action, $error ) = @_;
 
+    $c->res->header( 'X-Catalyst-ACL-Param-Action' => $action->reverse, 'X-Catalyst-ACL-Param-Error' => $error );
     $c->res->body( join " ", "handled", $c->res->body );
 
     $c->stash->{denied} = 1;

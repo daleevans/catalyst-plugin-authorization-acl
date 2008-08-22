@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 package Catalyst::Plugin::Authorization::ACL;
 use base qw/Class::Data::Inheritable/;
 
@@ -15,7 +13,7 @@ use Catalyst::Plugin::Authorization::ACL::Engine;
 
 BEGIN { __PACKAGE__->mk_classdata("_acl_engine") }
 
-our $VERSION = "0.08";
+our $VERSION = '0.09';
 
 my $FORCE_ALLOW = bless {}, __PACKAGE__ . "::Exception";
 
@@ -109,10 +107,9 @@ sub acl_access_denied {
     if ( my $handler =
         ( $c->get_actions( "access_denied", $action->namespace ) )[-1] )
     {
-        local @{ $c->req->args } = ( $action, $err );
         local $c->{_acl_forcibly_allowed} = undef;
 
-        eval { $c->execute($class, $handler) };
+        eval { $c->detach( $handler, [$action, $err] ) };
 
         return 1 if $c->{_acl_forcibly_allowed};
 
@@ -152,7 +149,7 @@ __END__
 
 =head1 NAME
 
-Catalyst::Plugin::Authorization::ACL - ACL support for L<Catalyst> applications.
+Catalyst::Plugin::Authorization::ACL - ACL support for Catalyst applications.
 
 =head1 SYNOPSIS
 
@@ -459,18 +456,17 @@ any (access is denied if a rule raises an exception).
 L<Catalyst::Plugin::Authentication>, L<Catalyst::Plugin::Authorization::Roles>,
 L<http://catalyst.perl.org/calendar/2005/24>
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Yuval Kogman, C<nothingmuch@woobling.org>
+Yuval Kogman E<lt>nothingmuch@woobling.orgE<gt>
 
 Jess Robinson
 
-=head1 COPYRIGHT & LICENCE
+=head1 COPYRIGHT & LICENSE
 
-	Copyright (c) 2005 the aforementioned authors. All rights
-	reserved. This program is free software; you can redistribute
-	it and/or modify it under the same terms as Perl itself.
+Copyright (c) 2008 the aforementioned authors.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
 
 =cut
-
-
