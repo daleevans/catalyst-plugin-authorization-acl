@@ -24,4 +24,6 @@ if($] < 5.009_005) {
 
 test_requires 'Test::More';
 
+resources repository => 'http://dev.catalyst.perl.org/repos/Catalyst/trunk/Catalyst-Plugin-Authorization-ACL/';
+
 WriteAll;
