@@ -191,7 +191,7 @@ sub add_rule {
             next unless $filter->($action);
 
             my $sort_index =
-              1 + ( $depth - $root_depth )
+              ( $depth - $root_depth )
               ;    # how far an action is from the origin of the ACL
             $self->app->log->debug("... $action at sort index $sort_index")
               if $self->app->debug;
