@@ -14,7 +14,7 @@ use Catalyst::Plugin::Authorization::ACL::Engine;
 
 BEGIN { __PACKAGE__->mk_classdata("_acl_engine") }
 
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
 my $FORCE_ALLOW = bless {}, __PACKAGE__ . "::Exception";
 
