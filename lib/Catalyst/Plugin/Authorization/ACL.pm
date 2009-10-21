@@ -517,7 +517,9 @@ caelum: Rafael Kitover E<lt>rkitover@cpan.orgE<gt>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2008,2009 the aforementioned authors.
+Copyright (c) 2005 - 2009
+the Catalyst::Plugin::Authorization::ACL L</AUTHOR> and L</CONTRIBUTORS>
+as listed above.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
