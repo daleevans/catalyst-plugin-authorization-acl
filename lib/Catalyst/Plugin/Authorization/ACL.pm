@@ -336,7 +336,7 @@ policy, access to the path will be permitted.
 
 To apply a rule to an action or group of actions you must supply a path.
 
-This path is what you should see dumped at the begining of the L<Catalyst>
+This path is what you should see dumped at the beginning of the L<Catalyst>
 server's debug output.
 
 For example, for the C<foo> action defined at the root level of your
