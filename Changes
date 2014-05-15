@@ -1,6 +1,8 @@
 Revision history for Catalyst::Plugin::Authorization::ACL
 
 {{$NEXT}}
+
+0.16 2014-05-15 03:16:39
     - fix a spelling error and copyright statement (Jonathan Yu) (RT#95566)
     - convert to git
     - convert to dzil
