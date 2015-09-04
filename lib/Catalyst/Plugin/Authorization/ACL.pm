@@ -360,7 +360,7 @@ will explicitly disallow if the predicate is false.
 
 =item Role Lists
 
-  __PACAKGE__->deny_access_unless_any( "/foo/bar", [qw/admin moose_trainer/] );
+  __PACKAGE__->deny_access_unless_any( "/foo/bar", [qw/admin moose_trainer/] );
 
 When the role is evaluated the L<Catalyst::Plugin::Authorization::Roles> will
 be used to check whether the currently logged in user has the specified roles.
